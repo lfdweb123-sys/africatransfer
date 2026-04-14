@@ -1,0 +1,40 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Users: only readable/writable by the user themselves
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Transfers: readable by anyone (download page uses server-side), 
+    // writable only by owner or server (admin SDK bypasses rules)
+    match /transfers/{transferId} {
+      // Anyone can read active transfers (for download page)
+      allow read: if resource.data.status == 'active';
+      
+      // Only owner can write
+      allow write: if request.auth != null && 
+                      request.auth.uid == resource.data.ownerId;
+      
+      // Uploaded files subcollection
+      match /uploadedFiles/{fileId} {
+        allow read: if get(/databases/$(database)/documents/transfers/$(transferId)).data.status == 'active';
+        allow write: if false; // Server only via Admin SDK
+      }
+    }
+
+    // Upload sessions: server-side only
+    match /uploadSessions/{sessionId} {
+      allow read, write: if false; // Admin SDK only
+    }
+
+    // Payments: only owner can read
+    match /payments/{paymentId} {
+      allow read: if request.auth != null && 
+                     request.auth.uid == resource.data.userId;
+      allow write: if false; // Server only
+    }
+  }
+}

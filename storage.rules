@@ -1,0 +1,18 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Final files: readable by anyone with valid URL (signed URLs used)
+    // Writing only via Admin SDK
+    match /files/{transferId}/{fileName} {
+      allow read: if true;  // Signed URLs add extra security
+      allow write: if false; // Server only
+    }
+
+    // Chunks: server only
+    match /chunks/{transferId}/{uploadId}/{chunkName} {
+      allow read, write: if false; // Admin SDK only
+    }
+  }
+}
